@@ -4,16 +4,32 @@ import (
 	"errors"
 	"fmt"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"obx/params"
+	"obx/repo"
 )
 
-var NetworkConfigErr = errors.New("network config error")
+var ErrNetworkConfig = errors.New("network config error")
 
 // Option is configuration option function for the Network
 type Option func(cfg *config) error
 
+func NetID(netID params.NetID) Option {
+	return func(cfg *config) error {
+		cfg.netID = netID
+		return nil
+	}
+}
+
 func PrivateKey(privKey crypto.PrivKey) Option {
 	return func(cfg *config) error {
 		cfg.privateKey = privKey
+		return nil
+	}
+}
+
+func Datastore(ds repo.Datastore) Option {
+	return func(cfg *config) error {
+		cfg.datastore = ds
 		return nil
 	}
 }
@@ -47,22 +63,27 @@ func DisableNatPortMap() Option {
 }
 
 type config struct {
+	netID             params.NetID
 	userAgent         string
 	bootstrapAddrs    []string
 	listenAddrs       []string
 	disableNatPortMap bool
 	privateKey        crypto.PrivKey
+	datastore         repo.Datastore
 }
 
 func (cfg *config) validate() error {
 	if cfg.privateKey == nil {
-		return fmt.Errorf("%w: private key is nil", NetworkConfigErr)
+		return fmt.Errorf("%w: private key is nil", ErrNetworkConfig)
 	}
 	if cfg.bootstrapAddrs == nil {
-		return fmt.Errorf("%w: bootstrap addrs is nil", NetworkConfigErr)
+		return fmt.Errorf("%w: bootstrap addrs is nil", ErrNetworkConfig)
 	}
 	if cfg.listenAddrs == nil {
-		return fmt.Errorf("%w: listen addrs is nil", NetworkConfigErr)
+		return fmt.Errorf("%w: listen addrs is nil", ErrNetworkConfig)
+	}
+	if cfg.datastore == nil {
+		return fmt.Errorf("%w: datastore is nil", ErrNetworkConfig)
 	}
 	return nil
 }

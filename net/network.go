@@ -2,9 +2,9 @@ package net
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"obx/params"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/routing"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	quic "github.com/libp2p/go-libp2p-quic-transport"
@@ -45,6 +46,11 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		400,                                  // HighWater,
 		connmgr.WithGracePeriod(time.Minute), // GracePeriod
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	pstore, err := pstoreds.NewPeerstore(ctx, cfg.datastore, pstoreds.DefaultOpts())
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +98,10 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		libp2p.UserAgent(cfg.userAgent),
 
 		libp2p.Ping(true),
+
+		libp2p.Peerstore(pstore),
+
+		libp2p.PrivateNetwork(cfg.netID.Bytes()),
 	)
 
 	if !cfg.disableNatPortMap {
@@ -103,6 +113,11 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		hostOpts,
 	)
 
+	for _, pid := range pstore.Peers()[:50] {
+		pi := pstore.PeerInfo(pid)
+		host.Connect(ctx, pi)
+	}
+
 	// The last step to get fully up and running would be to connect to
 	// bootstrap peers (or any other peers). We leave this commented as
 	// this is an example and the peer will die as soon as it finishes, so
@@ -110,7 +125,7 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 	for _, addr := range cfg.bootstrapAddrs {
 		ma, err := multiaddr.NewMultiaddr(addr)
 		if err != nil {
-			return nil, fmt.Errorf("%w: malformatted bootstrap peer", NetworkConfigErr)
+			return nil, fmt.Errorf("%w: malformatted bootstrap peer", ErrNetworkConfig)
 		}
 
 		pi, err := peer.AddrInfoFromP2pAddr(ma)
@@ -128,7 +143,7 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		host,
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(func(pmsg *pb.Message) string {
-			h := sha256.Sum256(pmsg.Data)
+			h := params.HashFunc(pmsg.Data)
 			return hex.EncodeToString(h[:])
 		}),
 	)

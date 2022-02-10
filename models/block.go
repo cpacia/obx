@@ -5,6 +5,11 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+func (h *BlockHeader) ID() ID {
+	ser, _ := h.Serialize()
+	return NewIDFromData(ser)
+}
+
 func (h *BlockHeader) Serialize() ([]byte, error) {
 	return proto.Marshal(h)
 }
@@ -32,6 +37,10 @@ func (h *BlockHeader) UnmarshalJSON(data string) error {
 	}
 	h = newHeader
 	return nil
+}
+
+func (h *Block) ID() ID {
+	return h.Header.ID()
 }
 
 func (b *Block) Serialize() ([]byte, error) {

@@ -3,6 +3,7 @@ package repo
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/gcash/bchutil"
 	"github.com/jessevdk/go-flags"
@@ -33,6 +34,13 @@ var (
 	defaultTestnetBootstrapAddrs = []string{
 		"",
 	}
+
+	defaultListenAddrs = []string{
+		"/ip4/0.0.0.0/tcp/9001",
+		"/ip6/::/tcp/9001",
+		"/ip4/0.0.0.0/udp/9001/quic",
+		"/ip6/::/udp/9001/quic",
+	}
 )
 
 // Config defines the configuration options for the node.
@@ -45,8 +53,11 @@ type Config struct {
 	LogDir            string   `long:"logdir" description:"Directory to log output."`
 	LogLevel          string   `short:"l" long:"loglevel" description:"Set the logging level [debug, info, notice, error, alert, critical, emergency]." default:"info"`
 	BoostrapAddrs     []string `long:"bootstrapaddr" description:"Override the default bootstrap addresses with the provided values"`
+	ListenAddrs       []string `long:"swarmaddr" description:"Override the default listen addresses with the provided values"`
 	Testnet           bool     `short:"t" long:"testnet" description:"Use the test network"`
+	Regest            bool     `short:"r" long:"regtest" description:"Use regression testing mode"`
 	DisableNATPortMap bool     `long:"noupnp" description:"Disable use of upnp"`
+	UserAgent         string   `long:"useragent" description:"A custom user agent to advertise to the network"`
 
 	RPCCert       string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
 	RPCKey        string   `long:"rpckey" description:"A path to the SSL key to use with gRPC"`
@@ -121,13 +132,17 @@ func LoadConfig() (*Config, error) {
 		configFileError = err
 	}
 
-	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
+	if cfg.Testnet && cfg.Regest {
+		return nil, errors.New("invalid combination of testnet and regtest")
+	}
+
+	netStr := "mainnet"
+	if cfg.Testnet {
+		netStr = "testnet"
+	}
+	cfg.DataDir = cleanAndExpandPath(path.Join(cfg.DataDir, netStr))
 	if cfg.LogDir == "" {
-		net := "mainnet"
-		if cfg.Testnet {
-			net = "testnet"
-		}
-		cfg.LogDir = cleanAndExpandPath(path.Join(cfg.DataDir, "logs", net))
+		cfg.LogDir = cleanAndExpandPath(path.Join(cfg.DataDir, "logs", netStr))
 	}
 
 	// Warn about missing config file only after all other configuration is
@@ -162,10 +177,7 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
-	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	if cfg.LogDir == "" {
-		cfg.LogDir = cleanAndExpandPath(path.Join(cfg.DataDir, "logs"))
-	}
+	cfg.UserAgent = "/obxd/" + VersionString() + "/" + cfg.UserAgent
 
 	return &cfg, nil
 }
@@ -217,6 +229,17 @@ func createDefaultConfigFile(destinationPath string, testnet bool) error {
 					if _, err := dest.WriteString("bootstrapaddr=" + addr + "\n"); err != nil {
 						return err
 					}
+				}
+			}
+			continue
+		}
+		if strings.Contains(line, "listenaddr=") {
+			if _, err := dest.WriteString(""); err != nil {
+				return err
+			}
+			for _, addr := range defaultListenAddrs {
+				if _, err := dest.WriteString("listenaddr=" + addr + "\n"); err != nil {
+					return err
 				}
 			}
 			continue
