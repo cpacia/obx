@@ -19,6 +19,14 @@ func LoadNetworkKey(ds Datastore) (crypto.PrivKey, error) {
 	return crypto.UnmarshalPrivateKey(keyBytes)
 }
 
+func PutNetworkKey(ds Datastore, key crypto.PrivKey) error {
+	keyBytes, err := crypto.MarshalPrivateKey(key)
+	if err != nil {
+		return err
+	}
+	return ds.Put(context.Background(), datastore.NewKey(Libp2pDatastoreKey), keyBytes)
+}
+
 func GenerateNetworkKeypair() (crypto.PrivKey, crypto.PubKey, error) {
 	privkey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {

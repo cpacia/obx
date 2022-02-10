@@ -3,9 +3,9 @@ package net
 import (
 	"errors"
 	"fmt"
+	"github.com/cpacia/obxd/params"
+	"github.com/cpacia/obxd/repo"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"obx/params"
-	"obx/repo"
 )
 
 var ErrNetworkConfig = errors.New("network config error")
@@ -48,9 +48,9 @@ func ListenAddrs(addrs []string) Option {
 	}
 }
 
-func BootstrapAddrs(addrs []string) Option {
+func SeedAddrs(addrs []string) Option {
 	return func(cfg *config) error {
-		cfg.bootstrapAddrs = addrs
+		cfg.seedAddrs = addrs
 		return nil
 	}
 }
@@ -65,7 +65,7 @@ func DisableNatPortMap() Option {
 type config struct {
 	netID             params.NetID
 	userAgent         string
-	bootstrapAddrs    []string
+	seedAddrs         []string
 	listenAddrs       []string
 	disableNatPortMap bool
 	privateKey        crypto.PrivKey
@@ -75,9 +75,6 @@ type config struct {
 func (cfg *config) validate() error {
 	if cfg.privateKey == nil {
 		return fmt.Errorf("%w: private key is nil", ErrNetworkConfig)
-	}
-	if cfg.bootstrapAddrs == nil {
-		return fmt.Errorf("%w: bootstrap addrs is nil", ErrNetworkConfig)
 	}
 	if cfg.listenAddrs == nil {
 		return fmt.Errorf("%w: listen addrs is nil", ErrNetworkConfig)

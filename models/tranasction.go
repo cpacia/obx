@@ -5,6 +5,22 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+func (tx *Transaction) ID() ID {
+	if tx.GetStandardTransaction() != nil {
+		ser, _ := tx.Serialize()
+		return NewIDFromData(ser)
+	}
+	if tx.GetCoinbaseTransaction() != nil {
+		ser, _ := tx.Serialize()
+		return NewIDFromData(ser)
+	}
+	if tx.GetStakeTransaction() != nil {
+		ser, _ := tx.Serialize()
+		return NewIDFromData(ser)
+	}
+	return ID{}
+}
+
 func (tx *Transaction) Serialize() ([]byte, error) {
 	return proto.Marshal(tx)
 }
@@ -32,6 +48,11 @@ func (tx *Transaction) UnmarshalJSON(data string) error {
 	}
 	tx = newTx
 	return nil
+}
+
+func (tx *StandardTransaction) ID() ID {
+	ser, _ := tx.Serialize()
+	return NewIDFromData(ser)
 }
 
 func (tx *StandardTransaction) Serialize() ([]byte, error) {
@@ -63,6 +84,11 @@ func (tx *StandardTransaction) UnmarshalJSON(data string) error {
 	return nil
 }
 
+func (tx *CoinbaseTransaction) ID() ID {
+	ser, _ := tx.Serialize()
+	return NewIDFromData(ser)
+}
+
 func (tx *CoinbaseTransaction) Serialize() ([]byte, error) {
 	return proto.Marshal(tx)
 }
@@ -90,6 +116,11 @@ func (tx *CoinbaseTransaction) UnmarshalJSON(data string) error {
 	}
 	tx = newTx
 	return nil
+}
+
+func (tx *StakeTransaction) ID() ID {
+	ser, _ := tx.Serialize()
+	return NewIDFromData(ser)
 }
 
 func (tx *StakeTransaction) Serialize() ([]byte, error) {

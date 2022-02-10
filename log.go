@@ -3,14 +3,34 @@ package main
 import (
 	"errors"
 	"fmt"
+	"path"
+	"strings"
+
+	"github.com/cpacia/obxd/net"
+	"github.com/cpacia/obxd/repo"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"obx/net"
-	"obx/repo"
-	"path"
-	"strings"
 )
+
+const (
+	black color = iota + 30
+	red
+	green
+	yellow
+	blue
+	magenta
+	cyan
+	white
+)
+
+// color represents a text color.
+type color uint8
+
+// Add adds the coloring to the given string.
+func (c color) Add(s string) string {
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", uint8(c), s)
+}
 
 var LogLevelMap = map[string]zapcore.Level{
 	"debug":     zap.DebugLevel,
@@ -47,11 +67,22 @@ func setupLogging(logDir, level string, testnet bool) error {
 	cfg.Encoding = "console"
 	cfg.Level = zap.NewAtomicLevelAt(logLevel)
 
+	levelToColor := map[zapcore.Level]color{
+		zapcore.DebugLevel:  magenta,
+		zapcore.InfoLevel:   blue,
+		zapcore.WarnLevel:   yellow,
+		zapcore.ErrorLevel:  red,
+		zapcore.DPanicLevel: red,
+		zapcore.PanicLevel:  red,
+		zapcore.FatalLevel:  red,
+	}
 	customLevelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString("[" + logLevelSeverity[level] + "]")
+		enc.AppendString("[" + levelToColor[level].Add(logLevelSeverity[level]) + "]")
 	}
 	cfg.EncoderConfig.EncodeLevel = customLevelEncoder
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	cfg.DisableCaller = true
+	cfg.EncoderConfig.ConsoleSeparator = "  "
 
 	var (
 		logger *zap.Logger

@@ -18,22 +18,14 @@ import (
 )
 
 const (
-	DefaultLogFilename    = "obx.log"
-	defaultConfigFilename = "obx.conf"
+	DefaultLogFilename    = "obxd.log"
+	defaultConfigFilename = "obxd.conf"
 	defaultGrpcPort       = "5001"
 )
 
 var (
-	DefaultHomeDir    = AppDataDir("obx", false)
+	DefaultHomeDir    = AppDataDir("obxd", false)
 	defaultConfigFile = filepath.Join(DefaultHomeDir, defaultConfigFilename)
-
-	DefaultMainnetBootstrapAddrs = []string{
-		"/ip4/167.172.126.176/tcp/4001/p2p/12D3KooWHnpVyu9XDeFoAVayqr9hvc9xPqSSHtCSFLEkKgcz5Wro",
-	}
-
-	defaultTestnetBootstrapAddrs = []string{
-		"",
-	}
 
 	defaultListenAddrs = []string{
 		"/ip4/0.0.0.0/tcp/9001",
@@ -52,13 +44,17 @@ type Config struct {
 	DataDir           string   `short:"d" long:"datadir" description:"Directory to store data"`
 	LogDir            string   `long:"logdir" description:"Directory to log output."`
 	LogLevel          string   `short:"l" long:"loglevel" description:"Set the logging level [debug, info, notice, error, alert, critical, emergency]." default:"info"`
-	BoostrapAddrs     []string `long:"bootstrapaddr" description:"Override the default bootstrap addresses with the provided values"`
-	ListenAddrs       []string `long:"swarmaddr" description:"Override the default listen addresses with the provided values"`
+	SeedAddrs         []string `long:"seedaddr" description:"Override the default seed addresses with the provided values"`
+	ListenAddrs       []string `long:"listenaddr" description:"Override the default listen addresses with the provided values"`
 	Testnet           bool     `short:"t" long:"testnet" description:"Use the test network"`
 	Regest            bool     `short:"r" long:"regtest" description:"Use regression testing mode"`
 	DisableNATPortMap bool     `long:"noupnp" description:"Disable use of upnp"`
 	UserAgent         string   `long:"useragent" description:"A custom user agent to advertise to the network"`
 
+	RPCOpts RPCOptions `group:"RPC Options"`
+}
+
+type RPCOptions struct {
 	RPCCert       string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
 	RPCKey        string   `long:"rpckey" description:"A path to the SSL key to use with gRPC"`
 	ExternalIPs   []string `long:"externalips" description:"This option should be used to specify the external IP address if using the auto-generated SSL certificate"`
@@ -140,7 +136,7 @@ func LoadConfig() (*Config, error) {
 	if cfg.Testnet {
 		netStr = "testnet"
 	}
-	cfg.DataDir = cleanAndExpandPath(path.Join(cfg.DataDir, netStr))
+
 	if cfg.LogDir == "" {
 		cfg.LogDir = cleanAndExpandPath(path.Join(cfg.DataDir, "logs", netStr))
 	}
@@ -153,25 +149,26 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Default RPC to listen on localhost only.
-	if len(cfg.GrpcListeners) == 0 {
+	if len(cfg.RPCOpts.GrpcListeners) == 0 {
 		addrs, err := net.LookupHost("localhost")
 		if err != nil {
 			return nil, err
 		}
-		cfg.GrpcListeners = make([]string, 0, len(addrs))
+		cfg.RPCOpts.GrpcListeners = make([]string, 0, len(addrs))
 		for _, addr := range addrs {
 			addr = net.JoinHostPort(addr, defaultGrpcPort)
-			cfg.GrpcListeners = append(cfg.GrpcListeners, addr)
+			cfg.RPCOpts.GrpcListeners = append(cfg.RPCOpts.GrpcListeners, addr)
 		}
 	}
 
-	if cfg.RPCCert == "" && cfg.RPCKey == "" {
-		cfg.RPCCert = path.Join(cfg.DataDir, "rpc.cert")
-		cfg.RPCKey = path.Join(cfg.DataDir, "rpc.key")
+	if cfg.RPCOpts.RPCCert == "" && cfg.RPCOpts.RPCKey == "" {
+		cfg.RPCOpts.RPCCert = path.Join(cfg.DataDir, "rpc.cert")
+		cfg.RPCOpts.RPCKey = path.Join(cfg.DataDir, "rpc.key")
 	}
 
-	if !fileExists(cfg.RPCKey) && !fileExists(cfg.RPCCert) {
-		err := genCertPair(cfg.RPCCert, cfg.RPCKey, cfg.ExternalIPs)
+	cfg.DataDir = cleanAndExpandPath(path.Join(cfg.DataDir, netStr))
+	if !fileExists(cfg.RPCOpts.RPCKey) && !fileExists(cfg.RPCOpts.RPCCert) {
+		err := genCertPair(cfg.RPCOpts.RPCCert, cfg.RPCOpts.RPCKey, cfg.RPCOpts.ExternalIPs)
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +188,7 @@ func createDefaultConfigFile(destinationPath string, testnet bool) error {
 		return err
 	}
 
-	sampleBytes, err := Asset("sample-obx.conf")
+	sampleBytes, err := Asset("sample-obxd.conf")
 	if err != nil {
 		return err
 	}
@@ -212,37 +209,6 @@ func createDefaultConfigFile(destinationPath string, testnet bool) error {
 		line, err = reader.ReadString('\n')
 		if err != nil && err != io.EOF {
 			return err
-		}
-
-		if strings.Contains(line, "bootstrapaddr=") {
-			if _, err := dest.WriteString(""); err != nil {
-				return err
-			}
-			if testnet {
-				for _, addr := range defaultTestnetBootstrapAddrs {
-					if _, err := dest.WriteString("bootstrapaddr=" + addr + "\n"); err != nil {
-						return err
-					}
-				}
-			} else {
-				for _, addr := range DefaultMainnetBootstrapAddrs {
-					if _, err := dest.WriteString("bootstrapaddr=" + addr + "\n"); err != nil {
-						return err
-					}
-				}
-			}
-			continue
-		}
-		if strings.Contains(line, "listenaddr=") {
-			if _, err := dest.WriteString(""); err != nil {
-				return err
-			}
-			for _, addr := range defaultListenAddrs {
-				if _, err := dest.WriteString("listenaddr=" + addr + "\n"); err != nil {
-					return err
-				}
-			}
-			continue
 		}
 
 		if _, err := dest.WriteString(line); err != nil {

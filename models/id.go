@@ -3,7 +3,7 @@ package models
 import (
 	"encoding/hex"
 	"fmt"
-	"obx/params"
+	"github.com/cpacia/obxd/params/hash"
 )
 
 const (
@@ -57,7 +57,7 @@ func NewIDFromString(id string) (ID, error) {
 
 func NewIDFromData(data []byte) ID {
 	var id ID
-	hash := params.HashFunc(data)
+	hash := hash.HashFunc(data)
 	id.SetBytes(hash)
 	return id
 }

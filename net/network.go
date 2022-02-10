@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"obx/params"
+	"github.com/cpacia/obxd/params/hash"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	coreconmgr "github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/host"
+	inet "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/routing"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
@@ -41,14 +42,11 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 
 	var idht *dht.IpfsDHT
 
-	cmgr, err := connmgr.NewConnManager(
-		100,                                  // Lowwater
-		400,                                  // HighWater,
-		connmgr.WithGracePeriod(time.Minute), // GracePeriod
+	cmgr := connmgr.NewConnManager(
+		100,         // Lowwater
+		400,         // HighWater,
+		time.Minute, // GracePeriod
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	pstore, err := pstoreds.NewPeerstore(ctx, cfg.datastore, pstoreds.DefaultOpts())
 	if err != nil {
@@ -64,12 +62,8 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		libp2p.DefaultSecurity,
 
 		// QUIC and TCP
-		libp2p.Transport(
-			libp2p.ChainOptions(
-				libp2p.Transport(tcp.NewTCPTransport),
-				libp2p.Transport(quic.NewTransport),
-			),
-		),
+		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(quic.NewTransport),
 
 		libp2p.DefaultMuxers,
 
@@ -101,31 +95,35 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 
 		libp2p.Peerstore(pstore),
 
-		libp2p.PrivateNetwork(cfg.netID.Bytes()),
+		// TODO: Enable once quic supports private networks.
+		//libp2p.PrivateNetwork(cfg.netID.Bytes()),
 	)
 
 	if !cfg.disableNatPortMap {
 		hostOpts = libp2p.ChainOptions(libp2p.NATPortMap(), hostOpts)
 	}
 
-	host, err := libp2p.New(
-		ctx,
-		hostOpts,
-	)
+	host, err := libp2p.New(hostOpts)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, pid := range pstore.Peers()[:50] {
+	for i, pid := range pstore.Peers() {
 		pi := pstore.PeerInfo(pid)
 		host.Connect(ctx, pi)
+		if i < 50 {
+			break
+		}
 	}
 
 	// The last step to get fully up and running would be to connect to
-	// bootstrap peers (or any other peers). We leave this commented as
+	// seed peers (or any other peers). We leave this commented as
 	// this is an example and the peer will die as soon as it finishes, so
 	// it is unnecessary to put strain on the network.
-	for _, addr := range cfg.bootstrapAddrs {
+	for _, addr := range cfg.seedAddrs {
 		ma, err := multiaddr.NewMultiaddr(addr)
 		if err != nil {
-			return nil, fmt.Errorf("%w: malformatted bootstrap peer", ErrNetworkConfig)
+			return nil, fmt.Errorf("%w: malformatted seed peer", ErrNetworkConfig)
 		}
 
 		pi, err := peer.AddrInfoFromP2pAddr(ma)
@@ -143,7 +141,7 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		host,
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(func(pmsg *pb.Message) string {
-			h := params.HashFunc(pmsg.Data)
+			h := hash.HashFunc(pmsg.Data)
 			return hex.EncodeToString(h[:])
 		}),
 	)
@@ -161,10 +159,19 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		pubsub:      ps,
 	}
 
-	go func() {
-		<-ctx.Done()
-		net.Close()
-	}()
+	connected := func(_ inet.Network, conn inet.Conn) {
+		log.Debugf("Connect to peer %s", conn.RemotePeer().Pretty())
+	}
+	disconnected := func(_ inet.Network, conn inet.Conn) {
+		log.Debugf("Disconnect from peer %s", conn.RemotePeer().Pretty())
+	}
+
+	notifier := &inet.NotifyBundle{
+		ConnectedF:    connected,
+		DisconnectedF: disconnected,
+	}
+
+	host.Network().Notify(notifier)
 
 	return net, nil
 }
