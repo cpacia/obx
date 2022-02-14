@@ -1,13 +1,16 @@
-package models
+package blocks
 
 import (
+	"bufio"
+	"bytes"
+	"github.com/cpacia/obxd/models"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 )
 
-func (h *BlockHeader) ID() ID {
+func (h *BlockHeader) ID() models.ID {
 	ser, _ := h.Serialize()
-	return NewIDFromData(ser)
+	return models.NewIDFromData(ser)
 }
 
 func (h *BlockHeader) Serialize() ([]byte, error) {
@@ -23,23 +26,29 @@ func (h *BlockHeader) Deserialize(data []byte) error {
 	return nil
 }
 
-func (h *BlockHeader) MarshalJSON() (string, error) {
+func (h *BlockHeader) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		Indent: "    ",
 	}
-	return m.MarshalToString(h)
+	var buf bytes.Buffer
+	err := m.Marshal(bufio.NewWriter(&buf), h)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (h *BlockHeader) UnmarshalJSON(data string) error {
+func (h *BlockHeader) UnmarshalJSON(data []byte) error {
 	newHeader := &BlockHeader{}
-	if err := jsonpb.UnmarshalString(data, newHeader); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), newHeader); err != nil {
 		return err
 	}
 	h = newHeader
 	return nil
 }
 
-func (h *Block) ID() ID {
+func (h *Block) ID() models.ID {
 	return h.Header.ID()
 }
 
@@ -56,16 +65,22 @@ func (b *Block) Deserialize(data []byte) error {
 	return nil
 }
 
-func (b *Block) MarshalJSON() (string, error) {
+func (b *Block) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		Indent: "    ",
 	}
-	return m.MarshalToString(b)
+	var buf bytes.Buffer
+	err := m.Marshal(bufio.NewWriter(&buf), b)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (b *Block) UnmarshalJSON(data string) error {
+func (b *Block) UnmarshalJSON(data []byte) error {
 	newBlock := &Block{}
-	if err := jsonpb.UnmarshalString(data, newBlock); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), newBlock); err != nil {
 		return err
 	}
 	b = newBlock

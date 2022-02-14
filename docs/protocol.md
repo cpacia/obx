@@ -134,7 +134,7 @@ cipherText = Encrypt(commitmentPreimage, sharedSecret)
 type PrivateParams struct {
         Inputs []struct {
             KeyHash []byte
-            Amount uint65
+            Amount uint64
             Nonce []byte
             CommitmentIndex int
             MerkleProof []byte
@@ -161,7 +161,7 @@ type PublicParams struct {
 // The standard circuit proves, in zero knowledge, that:
 // - The inputs exist in the UTXO set
 // - That the spender is authorized to spend the inputs
-// - That the transaction is not spending more than its allowed to
+// - That the transactions is not spending more than its allowed to
 // - That the nullifier is calculated correctly.
 func StandardCircuit(priv PrivateParams, pub PublicParams) bool {
 	    inVal := 0
@@ -202,7 +202,7 @@ func StandardCircuit(priv PrivateParams, pub PublicParams) bool {
                 // Make sure the OutputCommitment provided in the PublicParams
                 // actually matches the calculated output commitment. This prevents
                 // someone from putting a different output hash containing a
-                // different amount in the transaction.
+                // different amount in the transactions.
                 outputCommitment := Hash(Serialize(out.KeyHash, out.Amount, out.Nonce))
                 if !bytes.Equal(outputCommitment, pub.OutputCommitments[i]) {
                         return false
@@ -211,7 +211,7 @@ func StandardCircuit(priv PrivateParams, pub PublicParams) bool {
                 outVal += out.Amount
         }
 	
-	    // Verify the transaction is not spending more than it is allowed to
+	    // Verify the transactions is not spending more than it is allowed to
 	    if outVal + pub.Fee > inVal + pub.Coinbase {
 		        return false
 	    }

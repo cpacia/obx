@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/cpacia/obxd/params/hash"
+	"github.com/libp2p/go-libp2p-core/peerstore"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -40,17 +41,22 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		return nil, err
 	}
 
-	var idht *dht.IpfsDHT
-
-	cmgr := connmgr.NewConnManager(
-		100,         // Lowwater
-		400,         // HighWater,
-		time.Minute, // GracePeriod
+	var (
+		idht *dht.IpfsDHT
+		cmgr coreconmgr.ConnManager = connmgr.NewConnManager(
+			100,         // Lowwater
+			400,         // HighWater,
+			time.Minute, // GracePeriod
+		)
+		pstore peerstore.Peerstore
+		err    error
 	)
 
-	pstore, err := pstoreds.NewPeerstore(ctx, cfg.datastore, pstoreds.DefaultOpts())
-	if err != nil {
-		return nil, err
+	if cfg.host == nil {
+		pstore, err = pstoreds.NewPeerstore(ctx, cfg.datastore, pstoreds.DefaultOpts())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	hostOpts := libp2p.ChainOptions(
@@ -103,9 +109,16 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		hostOpts = libp2p.ChainOptions(libp2p.NATPortMap(), hostOpts)
 	}
 
-	host, err := libp2p.New(hostOpts)
-	if err != nil {
-		return nil, err
+	var host host.Host
+	if cfg.host != nil {
+		host = cfg.host
+		cmgr = host.ConnManager()
+		pstore = host.Peerstore()
+	} else {
+		host, err = libp2p.New(hostOpts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for i, pid := range pstore.Peers() {
@@ -149,7 +162,7 @@ func NewNetwork(ctx context.Context, opts ...Option) (*Network, error) {
 		return nil, err
 	}
 
-	// TODO: the pubsub object must have a validator set for the block and transaction
+	// TODO: the pubsub object must have a validator set for the blocks and transactions
 	// topics so that invalid blocks and transactions will not be relayed.
 
 	net := &Network{

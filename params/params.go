@@ -2,7 +2,7 @@ package params
 
 import (
 	"encoding/binary"
-	"github.com/cpacia/obxd/models"
+	"github.com/cpacia/obxd/models/blocks"
 )
 
 type NetID uint32
@@ -20,15 +20,17 @@ const (
 )
 
 type NetworkParams struct {
-	NetworkID    NetID
-	GenesisBlock models.Block
-	DefaultPort  string
-	SeedAddrs    []string
-	ListenAddrs  []string
+	NetworkID     NetID
+	GenesisBlock  blocks.Block
+	DefaultPort   string
+	SeedAddrs     []string
+	ListenAddrs   []string
+	AddressPrefix string
 }
 
 var MainnetParams = NetworkParams{
-	NetworkID: Mainnet,
+	NetworkID:    Mainnet,
+	GenesisBlock: MainnetGenesisBlock,
 	SeedAddrs: []string{
 		"/ip4/167.172.126.176/tcp/4001/p2p/12D3KooWHnpVyu9XDeFoAVayqr9hvc9xPqSSHtCSFLEkKgcz5Wro",
 	},
@@ -38,6 +40,7 @@ var MainnetParams = NetworkParams{
 		"/ip4/0.0.0.0/udp/9001/quic",
 		"/ip6/::/udp/9001/quic",
 	},
+	AddressPrefix: "ob",
 }
 
 var Testnet1Params = NetworkParams{
@@ -51,6 +54,7 @@ var Testnet1Params = NetworkParams{
 		"/ip4/0.0.0.0/udp/9002/quic",
 		"/ip6/::/udp/9002/quic",
 	},
+	AddressPrefix: "tn1",
 }
 
 var RegestParams = NetworkParams{
@@ -61,4 +65,5 @@ var RegestParams = NetworkParams{
 		"/ip4/0.0.0.0/udp/9003/quic",
 		"/ip6/::/udp/9003/quic",
 	},
+	AddressPrefix: "reg",
 }

@@ -1,24 +1,27 @@
-package models
+package transactions
 
 import (
+	"bufio"
+	"bytes"
+	"github.com/cpacia/obxd/models"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 )
 
-func (tx *Transaction) ID() ID {
+func (tx *Transaction) ID() models.ID {
 	if tx.GetStandardTransaction() != nil {
 		ser, _ := tx.Serialize()
-		return NewIDFromData(ser)
+		return models.NewIDFromData(ser)
 	}
 	if tx.GetCoinbaseTransaction() != nil {
 		ser, _ := tx.Serialize()
-		return NewIDFromData(ser)
+		return models.NewIDFromData(ser)
 	}
 	if tx.GetStakeTransaction() != nil {
 		ser, _ := tx.Serialize()
-		return NewIDFromData(ser)
+		return models.NewIDFromData(ser)
 	}
-	return ID{}
+	return models.ID{}
 }
 
 func (tx *Transaction) Serialize() ([]byte, error) {
@@ -34,25 +37,31 @@ func (tx *Transaction) Deserialize(data []byte) error {
 	return nil
 }
 
-func (tx *Transaction) MarshalJSON() (string, error) {
+func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		Indent: "    ",
 	}
-	return m.MarshalToString(tx)
+	var buf bytes.Buffer
+	err := m.Marshal(bufio.NewWriter(&buf), tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (tx *Transaction) UnmarshalJSON(data string) error {
+func (tx *Transaction) UnmarshalJSON(data []byte) error {
 	newTx := &Transaction{}
-	if err := jsonpb.UnmarshalString(data, newTx); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), newTx); err != nil {
 		return err
 	}
 	tx = newTx
 	return nil
 }
 
-func (tx *StandardTransaction) ID() ID {
+func (tx *StandardTransaction) ID() models.ID {
 	ser, _ := tx.Serialize()
-	return NewIDFromData(ser)
+	return models.NewIDFromData(ser)
 }
 
 func (tx *StandardTransaction) Serialize() ([]byte, error) {
@@ -68,25 +77,31 @@ func (tx *StandardTransaction) Deserialize(data []byte) error {
 	return nil
 }
 
-func (tx *StandardTransaction) MarshalJSON() (string, error) {
+func (tx *StandardTransaction) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		Indent: "    ",
 	}
-	return m.MarshalToString(tx)
+	var buf bytes.Buffer
+	err := m.Marshal(bufio.NewWriter(&buf), tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (tx *StandardTransaction) UnmarshalJSON(data string) error {
+func (tx *StandardTransaction) UnmarshalJSON(data []byte) error {
 	newTx := &StandardTransaction{}
-	if err := jsonpb.UnmarshalString(data, newTx); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), newTx); err != nil {
 		return err
 	}
 	tx = newTx
 	return nil
 }
 
-func (tx *CoinbaseTransaction) ID() ID {
+func (tx *CoinbaseTransaction) ID() models.ID {
 	ser, _ := tx.Serialize()
-	return NewIDFromData(ser)
+	return models.NewIDFromData(ser)
 }
 
 func (tx *CoinbaseTransaction) Serialize() ([]byte, error) {
@@ -102,25 +117,31 @@ func (tx *CoinbaseTransaction) Deserialize(data []byte) error {
 	return nil
 }
 
-func (tx *CoinbaseTransaction) MarshalJSON() (string, error) {
+func (tx *CoinbaseTransaction) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		Indent: "    ",
 	}
-	return m.MarshalToString(tx)
+	var buf bytes.Buffer
+	err := m.Marshal(bufio.NewWriter(&buf), tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (tx *CoinbaseTransaction) UnmarshalJSON(data string) error {
+func (tx *CoinbaseTransaction) UnmarshalJSON(data []byte) error {
 	newTx := &CoinbaseTransaction{}
-	if err := jsonpb.UnmarshalString(data, newTx); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), newTx); err != nil {
 		return err
 	}
 	tx = newTx
 	return nil
 }
 
-func (tx *StakeTransaction) ID() ID {
+func (tx *StakeTransaction) ID() models.ID {
 	ser, _ := tx.Serialize()
-	return NewIDFromData(ser)
+	return models.NewIDFromData(ser)
 }
 
 func (tx *StakeTransaction) Serialize() ([]byte, error) {
@@ -136,16 +157,22 @@ func (tx *StakeTransaction) Deserialize(data []byte) error {
 	return nil
 }
 
-func (tx *StakeTransaction) MarshalJSON() (string, error) {
+func (tx *StakeTransaction) MarshalJSON() ([]byte, error) {
 	m := jsonpb.Marshaler{
 		Indent: "    ",
 	}
-	return m.MarshalToString(tx)
+	var buf bytes.Buffer
+	err := m.Marshal(bufio.NewWriter(&buf), tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (tx *StakeTransaction) UnmarshalJSON(data string) error {
+func (tx *StakeTransaction) UnmarshalJSON(data []byte) error {
 	newTx := &StakeTransaction{}
-	if err := jsonpb.UnmarshalString(data, newTx); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), newTx); err != nil {
 		return err
 	}
 	tx = newTx

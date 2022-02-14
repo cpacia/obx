@@ -6,6 +6,7 @@ import (
 	"github.com/cpacia/obxd/params"
 	"github.com/cpacia/obxd/repo"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/host"
 )
 
 var ErrNetworkConfig = errors.New("network config error")
@@ -62,24 +63,32 @@ func DisableNatPortMap() Option {
 	}
 }
 
+func WithHost(host host.Host) Option {
+	return func(cfg *config) error {
+		cfg.host = host
+		return nil
+	}
+}
+
 type config struct {
 	netID             params.NetID
 	userAgent         string
 	seedAddrs         []string
 	listenAddrs       []string
 	disableNatPortMap bool
+	host              host.Host
 	privateKey        crypto.PrivKey
 	datastore         repo.Datastore
 }
 
 func (cfg *config) validate() error {
-	if cfg.privateKey == nil {
+	if cfg.privateKey == nil && cfg.host == nil {
 		return fmt.Errorf("%w: private key is nil", ErrNetworkConfig)
 	}
-	if cfg.listenAddrs == nil {
+	if cfg.listenAddrs == nil && cfg.host == nil {
 		return fmt.Errorf("%w: listen addrs is nil", ErrNetworkConfig)
 	}
-	if cfg.datastore == nil {
+	if cfg.datastore == nil && cfg.host == nil {
 		return fmt.Errorf("%w: datastore is nil", ErrNetworkConfig)
 	}
 	return nil

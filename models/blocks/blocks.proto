@@ -1,0 +1,21 @@
+syntax = "proto3";
+option go_package = "../blocks";
+
+import "transactions/transactions.proto";
+
+message BlockHeader {
+    uint64 version       = 1;
+    bytes parent         = 2;
+    int64 timestamp      = 3;
+    bytes merkle_root    = 4;
+    bytes validator_root = 5;
+    bytes nullifier_root = 6;
+    bytes anchor         = 7;
+    bytes producer_ID    = 8;
+    bytes signature      = 9;
+}
+
+message Block {
+    BlockHeader header                = 1;
+    repeated Transaction transactions = 2;
+}
