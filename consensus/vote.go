@@ -13,11 +13,11 @@ type Status int
 func (s Status) String() string {
 	switch s {
 	case 0:
-		return "Invalid"
-	case 1:
 		return "Rejected"
+	case 1:
+		return "NotPreferred"
 	case 2:
-		return "Accepted"
+		return "Preferred"
 	case 3:
 		return "Finalized"
 
@@ -26,16 +26,20 @@ func (s Status) String() string {
 }
 
 const (
-	// StatusInvalid means the target is invalid
-	StatusInvalid Status = iota
+	// StatusRejected means the target has been rejected. Note that blocks are
+	// only considered rejected if a competing block has been finalized. If the
+	// confidence is a 'no' result has crossed the finalization score, it will
+	// remain in the StatusNotPreferred state until a competing block has been
+	// finalized.
+	StatusRejected Status = iota
 
-	// StatusRejected means the target is been deemed to be rejected
-	StatusRejected
+	// StatusNotPreferred means the target is not currently preferred by the node
+	StatusNotPreferred
 
-	// StatusAccepted means the target is been deemed to be accepted
-	StatusAccepted
+	// StatusPreferred means the target is currently preferred by the node
+	StatusPreferred
 
-	// StatusFinalized means the consensus on the target is been finalized
+	// StatusFinalized means the target has been finalized in the affirmative.
 	StatusFinalized
 )
 
@@ -56,8 +60,8 @@ func NewVoteRecord(blockID models.ID, accepted bool) *VoteRecord {
 	return &VoteRecord{blockID: blockID, confidence: boolToUint16(accepted), timestamp: time.Now()}
 }
 
-// isAccepted returns whether or not the voted state is acceptance or not
-func (vr VoteRecord) isAccepted() bool {
+// isPreferred returns whether or not the voted state is preferred or not
+func (vr VoteRecord) isPreferred() bool {
 	return (vr.confidence & 0x01) == 1
 }
 
@@ -92,7 +96,7 @@ func (vr *VoteRecord) regsiterVote(vote uint8) bool {
 	}
 
 	// Vote is conclusive and agrees with our current state
-	if vr.isAccepted() == yes {
+	if vr.isPreferred() == yes {
 		vr.confidence += 2
 		return vr.getConfidence() == AvalancheFinalizationScore
 	}
@@ -105,16 +109,16 @@ func (vr *VoteRecord) regsiterVote(vote uint8) bool {
 
 func (vr *VoteRecord) status() (status Status) {
 	finalized := vr.hasFinalized()
-	accepted := vr.isAccepted()
+	preferred := vr.isPreferred()
 	switch {
-	case !finalized && accepted:
-		status = StatusAccepted
-	case !finalized && !accepted:
-		status = StatusRejected
-	case finalized && accepted:
+	case !finalized && preferred:
+		status = StatusPreferred
+	case !finalized && !preferred:
+		status = StatusNotPreferred
+	case finalized && preferred:
 		status = StatusFinalized
-	case finalized && !accepted:
-		status = StatusInvalid
+	case finalized && !preferred:
+		status = StatusRejected
 	}
 	return status
 }

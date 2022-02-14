@@ -237,7 +237,7 @@ func (eng *AvalancheEngine) handleQuery(req *wire.MsgAvaRequest, respChan chan *
 		if ok {
 			// We're only going to vote for items we have a record for.
 			vote := byte(0x00) // No vote
-			if record.isAccepted() {
+			if record.isPreferred() {
 				vote = 0x01 // Yes vote
 			}
 			votes[i] = vote
@@ -334,13 +334,13 @@ func (eng *AvalancheEngine) handleRegisterVotes(p peer.ID, resp *wire.MsgAvaResp
 			continue
 		}
 
-		if vr.isAccepted() {
+		if vr.isPreferred() {
 			// We need to keep track of conflicting blocks
 			// when this one becomes accepted with need to set the
 			// confidence of the conflicts back to zero.
 		}
 
-		if vr.status() == StatusFinalized || vr.status() == StatusInvalid {
+		if vr.status() == StatusFinalized || vr.status() == StatusRejected {
 			callback, ok := eng.callbacks[inv]
 			if ok {
 				callback <- vr.status()
