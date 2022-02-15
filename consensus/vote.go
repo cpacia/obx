@@ -46,8 +46,8 @@ const (
 // VoteRecord keeps track of a series of votes for a target
 type VoteRecord struct {
 	blockID          models.ID
-	votes            uint8
-	consider         uint8
+	votes            uint16
+	consider         uint16
 	confidence       uint16
 	inflightRequests uint8
 	timestamp        time.Time
@@ -82,14 +82,14 @@ func (vr *VoteRecord) regsiterVote(vote uint8) bool {
 		return false
 	}
 	vr.totalVotes++
-	vr.votes = (vr.votes << 1) | boolToUint8(vote == 1)
-	vr.consider = (vr.consider << 1) | boolToUint8(int8(vote) >= 0)
+	vr.votes = (vr.votes << 1) | boolToUint16(vote == 1)
+	vr.consider = (vr.consider << 1) | boolToUint16(int8(vote) >= 0)
 
-	yes := countBits8(vr.votes&vr.consider) > 6
+	yes := countBits16(vr.votes&vr.consider) > 12
 
 	// The round is inconclusive
 	if !yes {
-		no := countBits8((-vr.votes-1)&vr.consider) > 6
+		no := countBits16((-vr.votes-1)&vr.consider) > 12
 		if !no {
 			return false
 		}
@@ -131,6 +131,13 @@ func (vr *VoteRecord) printState() {
 }
 
 func countBits8(i uint8) (count int) {
+	for ; i > 0; i &= (i - 1) {
+		count++
+	}
+	return count
+}
+
+func countBits16(i uint16) (count int) {
 	for ; i > 0; i &= (i - 1) {
 		count++
 	}

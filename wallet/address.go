@@ -13,12 +13,12 @@ type Address interface {
 	String() string
 }
 
-type SpendNote struct {
+type SpendScript struct {
 	threshold uint8
 	pubkeys   []crypto.PubKey
 }
 
-func (s *SpendNote) Serialize() ([]byte, error) {
+func (s *SpendScript) Serialize() ([]byte, error) {
 	ser := []byte{s.threshold}
 	for _, pub := range s.pubkeys {
 		keyBytes, err := pub.Raw()
@@ -37,8 +37,8 @@ type BasicAddress struct {
 	params  *params.NetworkParams
 }
 
-func NewBasicAddress(note SpendNote, viewKey crypto.PubKey, params *params.NetworkParams) (*BasicAddress, error) {
-	ser, err := note.Serialize()
+func NewBasicAddress(script SpendScript, viewKey crypto.PubKey, params *params.NetworkParams) (*BasicAddress, error) {
+	ser, err := script.Serialize()
 	if err != nil {
 		return nil, err
 	}

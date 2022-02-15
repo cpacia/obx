@@ -31,7 +31,7 @@ func BenchmarkBuildMerkleTreeStore(b *testing.B) {
 	}
 	mmr := NewMerkleMountainRange()
 	for _, d := range data {
-		mmr.Insert(d)
+		mmr.Insert(d, false)
 	}
 
 	b.Run("merkle", func(b *testing.B) {

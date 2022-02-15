@@ -29,10 +29,10 @@ const (
 	AvalancheRequestTimeout = 1 * time.Minute
 
 	// AvalancheFinalizationScore is the confidence score we consider to be final
-	AvalancheFinalizationScore = 128
+	AvalancheFinalizationScore = 256
 
 	// AvalancheTimeStep is the amount of time to wait between event ticks
-	AvalancheTimeStep = 10 * time.Millisecond
+	AvalancheTimeStep = time.Millisecond
 
 	// AvalancheMaxInflightPoll is the max outstanding requests that we can have
 	// for any inventory item.
@@ -90,6 +90,7 @@ type AvalancheEngine struct {
 	queries        map[string]RequestRecord
 	callbacks      map[models.ID]chan<- Status
 	streams        map[peer.ID]inet.Stream
+	start          time.Time
 
 	alwaysNo bool
 }
@@ -148,6 +149,7 @@ out:
 }
 
 func (eng *AvalancheEngine) NewBlock(blockID models.ID, initialAcceptancePreference bool, callback chan<- Status) {
+	eng.start = time.Now()
 	eng.msgChan <- &newBlockMessage{
 		blockID:                     blockID,
 		initialAcceptancePreference: initialAcceptancePreference,
@@ -341,6 +343,7 @@ func (eng *AvalancheEngine) handleRegisterVotes(p peer.ID, resp *wire.MsgAvaResp
 		}
 
 		if vr.status() == StatusFinalized || vr.status() == StatusRejected {
+			fmt.Println(time.Since(eng.start))
 			callback, ok := eng.callbacks[inv]
 			if ok {
 				callback <- vr.status()

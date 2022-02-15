@@ -101,8 +101,7 @@ func (mmr *MerkleMountainRange) Root() models.ID {
 		combined = append(combined, peakRoot(peak).Hash()...)
 	}
 	root := hash.HashFunc(combined)
-	id, _ := models.NewID(root)
-	return id
+	return models.NewID(root)
 }
 
 func (mmr *MerkleMountainRange) Prune() {

@@ -4,15 +4,16 @@ option go_package = "../blocks";
 import "transactions/transactions.proto";
 
 message BlockHeader {
-    uint64 version       = 1;
-    bytes parent         = 2;
-    int64 timestamp      = 3;
-    bytes merkle_root    = 4;
-    bytes validator_root = 5;
-    bytes nullifier_root = 6;
-    bytes anchor         = 7;
-    bytes producer_ID    = 8;
-    bytes signature      = 9;
+    uint32 version       = 1;
+    uint32 height        = 2;
+    bytes parent         = 3;
+    int64 timestamp      = 4;
+    bytes tx_root        = 5;
+    bytes validator_root = 6;
+    bytes nullifier_root = 7;
+    bytes utxo_root      = 8;
+    bytes producer_ID    = 9;
+    bytes signature      = 10;
 }
 
 message Block {

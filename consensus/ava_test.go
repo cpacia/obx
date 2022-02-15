@@ -3,19 +3,16 @@ package consensus
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
 	"github.com/cpacia/obxd/models"
-	"sync"
-	"testing"
-	"time"
-
 	"github.com/cpacia/obxd/net"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
+	"sync"
+	"testing"
 )
 
 func TestAvalancheEngine(t *testing.T) {
 	mocknet := mocknet.New(context.Background())
-	numNodes := 100
+	numNodes := 150
 	numNoVotes := 0
 	numAlwaysNoVotes := 0
 
@@ -55,7 +52,7 @@ func TestAvalancheEngine(t *testing.T) {
 	b := make([]byte, 32)
 	rand.Read(b)
 	chans := make([]chan Status, 0, numNodes)
-	start := time.Now()
+	//start := time.Now()
 	for i, engine := range engines {
 		chans = append(chans, make(chan Status))
 		if i < numAlwaysNoVotes {
@@ -73,11 +70,11 @@ func TestAvalancheEngine(t *testing.T) {
 			continue
 		}
 		go func(x int) {
-			status := <-chans[x]
-			fmt.Printf("Node %d finished as %s\n", x, status)
+			<-chans[x]
+			//fmt.Printf("Node %d finished as %s\n", x, status)
 			wg.Done()
 		}(i)
 	}
 	wg.Wait()
-	fmt.Println(time.Since(start))
+	//fmt.Println(time.Since(start))
 }
